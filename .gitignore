@@ -1,0 +1,14 @@
+# Environment variables (contiene API keys sensibles)
+.env
+
+# MacOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# PHP
+vendor/
+composer.lock
+
