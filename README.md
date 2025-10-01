@@ -165,6 +165,9 @@ parcial-1-p2-acn2bv-albert-lukmanov/
 │
 ├── index.php              # Archivo principal con toda la lógica
 ├── README.md              # Este archivo
+├── .env                   # Variables de entorno (NO en Git)
+├── .env.example           # Plantilla de configuración
+├── .gitignore             # Archivos ignorados por Git
 │
 └── assets/
     ├── css/               # (Opcional) CSS externo
