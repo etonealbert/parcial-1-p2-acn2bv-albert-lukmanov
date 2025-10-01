@@ -79,21 +79,34 @@ Luego abre tu navegador en: **http://localhost:8000/index.php**
 
 ## 🧠 Extensión LLM / Asistente Inteligente
 
-El sistema incluye un **asistente de viajes inteligente** que responde preguntas en lenguaje natural.
+El sistema incluye un **asistente de viajes inteligente** que responde preguntas en lenguaje natural usando **OpenAI GPT-4o-mini**.
 
 ### Funcionamiento
 
-**Sin API de LLM configurada (Fallback - Activo por defecto):**
+**Con API de OpenAI configurada (Activo):**
+- El sistema usa OpenAI GPT-4o-mini para analizar la pregunta
+- La IA recibe el contexto de todos los destinos disponibles
+- Recomienda destinos específicos basándose en la consulta
+- Muestra sugerencias con el badge "🤖 Sugerencias con IA"
+- Si OpenAI falla o no responde, automáticamente usa el fallback
+
+**Fallback automático (si OpenAI no está disponible):**
 - El sistema analiza la pregunta buscando palabras clave
 - Detecta continentes: "Sudamérica", "Europa", "Asia", "África"
 - Detecta tipos: "aventura", "playa", "montaña", "urbano", "cultural"
 - Filtra los destinos locales según los criterios detectados
 - Muestra sugerencias con un badge indicando "💡 Sugerencias locales"
 
-**Con API de LLM configurada (Opcional):**
-- Para activarlo, necesitas agregar una clave de API en el código
-- El sistema enviará la pregunta a un modelo de lenguaje
-- Las respuestas incluirán el badge "🤖 Sugerencias con IA"
+### Configuración de OpenAI
+
+El proyecto incluye un archivo `.env` (no versionado en Git) con las credenciales:
+
+```env
+OPENAI_API_KEY=tu_api_key_aqui
+OPENAI_MODEL=gpt-4o-mini
+```
+
+**⚠️ Importante:** El archivo `.env` está en `.gitignore` para proteger las credenciales sensibles.
 
 ### Ejemplos de preguntas
 
