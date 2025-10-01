@@ -9,6 +9,37 @@
  * Sistema de guía de viajes con búsqueda, filtrado, temas y sugerencias con IA/fallback
  */
 
+// Cargar variables de entorno desde .env
+function cargarEnv($archivo = '.env') {
+    if (!file_exists($archivo)) {
+        return false;
+    }
+    
+    $lineas = file($archivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lineas as $linea) {
+        // Ignorar comentarios
+        if (strpos(trim($linea), '#') === 0) {
+            continue;
+        }
+        
+        // Parsear línea KEY=VALUE
+        if (strpos($linea, '=') !== false) {
+            list($nombre, $valor) = explode('=', $linea, 2);
+            $nombre = trim($nombre);
+            $valor = trim($valor);
+            
+            if (!empty($nombre)) {
+                $_ENV[$nombre] = $valor;
+                putenv("$nombre=$valor");
+            }
+        }
+    }
+    return true;
+}
+
+// Cargar configuración
+cargarEnv();
+
 // Array asociativo con 8+ destinos turísticos
 $destinos = [
     [
@@ -151,12 +182,94 @@ function filtrarDestinos($destinos, $busqueda, $continente, $tipo) {
     });
 }
 
+// Función para consultar OpenAI
+function consultarOpenAI($pregunta, $destinos) {
+    $apiKey = getenv('OPENAI_API_KEY');
+    $modelo = getenv('OPENAI_MODEL') ?: 'gpt-4o-mini';
+    
+    if (empty($apiKey)) {
+        return null;
+    }
+    
+    // Crear contexto con los destinos disponibles
+    $listaDestinos = array_map(function($d) {
+        return "- {$d['titulo']} ({$d['pais']}, {$d['continente']}) - Tipo: {$d['tipo']}";
+    }, $destinos);
+    
+    $contexto = "Eres un asistente de viajes. Estos son los destinos disponibles:\n\n" . 
+                implode("\n", $listaDestinos) . 
+                "\n\nBasa tu respuesta SOLO en estos destinos. Responde en formato JSON con un array 'destinos' que contenga los títulos de los destinos recomendados.";
+    
+    $payload = [
+        'model' => $modelo,
+        'messages' => [
+            ['role' => 'system', 'content' => $contexto],
+            ['role' => 'user', 'content' => $pregunta]
+        ],
+        'temperature' => 0.7,
+        'max_tokens' => 500
+    ];
+    
+    $ch = curl_init('https://api.openai.com/v1/chat/completions');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey
+    ]);
+    
+    $respuesta = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200 || !$respuesta) {
+        return null;
+    }
+    
+    $datos = json_decode($respuesta, true);
+    if (!isset($datos['choices'][0]['message']['content'])) {
+        return null;
+    }
+    
+    $contenido = $datos['choices'][0]['message']['content'];
+    
+    // Intentar extraer títulos de destinos de la respuesta
+    $titulosRecomendados = [];
+    foreach ($destinos as $destino) {
+        if (stripos($contenido, $destino['titulo']) !== false) {
+            $titulosRecomendados[] = $destino['titulo'];
+        }
+    }
+    
+    return $titulosRecomendados;
+}
+
 // Función para sugerir destinos con IA o fallback
 function sugerirConIA($pregunta, $destinos) {
-    // Por ahora, usamos el fallback (sin API de LLM configurada)
     $usandoIA = false;
+    $titulosIA = [];
     
-    // Análisis simple de la pregunta para el fallback
+    // Intentar usar OpenAI si está configurado
+    if (getenv('OPENAI_API_KEY')) {
+        $titulosIA = consultarOpenAI($pregunta, $destinos);
+        if ($titulosIA !== null && !empty($titulosIA)) {
+            $usandoIA = true;
+            // Filtrar destinos según recomendación de IA
+            $sugerencias = array_filter($destinos, function($destino) use ($titulosIA) {
+                return in_array($destino['titulo'], $titulosIA);
+            });
+            
+            if (!empty($sugerencias)) {
+                return [
+                    'usandoIA' => $usandoIA,
+                    'destinos' => array_values($sugerencias)
+                ];
+            }
+        }
+    }
+    
+    // FALLBACK: Análisis simple de la pregunta
     $preguntaLower = strtolower($pregunta);
     $continenteBuscado = '';
     $tipoBuscado = '';
