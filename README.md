@@ -256,14 +256,6 @@ Las imágenes utilizadas provienen de [Unsplash](https://unsplash.com), platafor
 
 ---
 
-## 🔗 Repositorio GitHub
-
-**URL:** [https://github.com/etonealbert/parcial-1-p2-acn2bv-albert-lukmanov](https://github.com/etonealbert/parcial-1-p2-acn2bv-albert-lukmanov)
-
-**Usuario colaborador:** sergiomedinaio
-
----
-
 ## 💬 Notas del desarrollo
 
 - **Commits:** Se utilizó Conventional Commits (`feat:`, `fix:`, `docs:`, etc.)
